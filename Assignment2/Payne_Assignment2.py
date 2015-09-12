@@ -2,10 +2,12 @@
 # CSCI 3202 Assignment 2
 
 class Node(object):
-	def __init__(self, location):
+	def __init__(self, location, type):
 		self.location = location
-		self.distanceToStart = 0
-		self.heuristic = 0
+		self.adjacentNodes = []
+		self.type = type # path, mountain, wall
+		self.g = 0 # Distance to Start
+		self.h = 0 # 
 		self.f = 0
 		self.parent = None
 
@@ -22,8 +24,40 @@ def inputText():
 		return (False,False)
 	return (mapFile, hType)
 
+# Reads the file and returns the file as a string
 def readFile(fileName):
-	pass
+	mapString = open(fileName, 'r')
+	mapString = mapString.read()
+	return mapString
+
+def buildGraph(mapString):
+	xPos = 0
+	yPos = 0
+	rows = mapString.split('\n')
+	newRows = []
+	nodeList = []
+	
+	for row in rows:
+		if row != '':
+			newRows.append(row.split(' '))
+	for c in newRows:
+		xPos = 0
+		for r in c:
+			pathType = ''
+			print r
+			if r == '0':
+				pathType = 'path'
+			elif r == '1':
+				pathType = 'mountain'
+			else:
+				pathType = 'wall'
+			newNode = Node([xPos, yPos], pathType)
+			nodeList.append(newNode)
+			xPos = xPos + 1
+		yPos = yPos + 1
+	return nodeList
+
+
 	
 # Horizontal and Vertical Moves cost 10
 # Diagonal Moves cost 14
@@ -34,5 +68,5 @@ def Manhattan_Distance(N):
 if __name__ == "__main__":
 	mapFile, hType = inputText()
 	if mapFile != False:
-		readFile(mapFile)
-		myNode = Node([0, 0])
+		mapString = readFile(mapFile)
+		buildGraph(mapString)
