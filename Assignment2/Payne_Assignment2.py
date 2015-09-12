@@ -7,11 +7,10 @@ class Node(object):
 	def __init__(self, id, location, type):
 		self.id = id
 		self.location = location
-		self.adjacentNodes = []
 		self.type = type # path, mountain, wall
 		self.g = 0 # Distance to Start
-		self.h = 0 # 
-		self.f = 0
+		self.h = 0 # Heuristic
+		self.f = 0 # g + h
 		self.parent = None
 
 # Read in the map file to use and the heuristic type
@@ -81,15 +80,40 @@ def returnAdjacentNodes(nodeDict, currentNode):
 				dNodes.append(nodeDict[n])
 	return nNodes, dNodes
 
+# Returns 10 times the distance from every node to the end node
+def manhattanDistance(nodeDict, end):
+	xPos,yPos = 0,0
+	endX, endY = end.location
+
+	for n in nodeDict:
+		xPos,yPos = nodeDict[n].location
+		nodeDict[n].h = (abs(endX - xPos) + abs(endY - yPos)) * 10
+
+	return nodeDict
+
 # Horizontal and Vertical Moves cost 10
 # Diagonal Moves cost 14
 # Mountains cost an extra 10
-def Manhattan_Distance(N):
+def aStar(nodeDict, start, end):
 	pass
+
+
 
 if __name__ == "__main__":
 	mapFile, hType = inputText()
+	
 	if mapFile != False:
-		mapString = readFile(mapFile)
-		nodeDict = stringToList(mapString)
-		returnAdjacentNodes(nodeDict, nodeDict[str([0,6])])
+		if mapFile == 'World1.txt':
+			start = str([0,6]) # Starting/Ending points for World 1
+			end = str([9,0])
+		else:
+			start = str([0,7]) # Starting/Ending points for World 2
+			end = str([9,0])
+		
+		mapString = readFile(mapFile) # Convert world file to string
+		nodeDict = stringToList(mapString) # Convert string to dictionary of nodes
+		
+		if hType == 'Manhattan':
+			nodeDict = manhattanDistance(nodeDict, nodeDict[end])
+			print nodeDict[start].h
+		#returnAdjacentNodes(nodeDict, nodeDict[start])
