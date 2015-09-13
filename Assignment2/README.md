@@ -1,9 +1,6 @@
-Willie Payne
-CSCI 3202
-
 #Assignment 2
 
-###Implementation of A* Search with Manhattan distance and Diagonal Shortcut heuristics. 
+###Implementation of A* Search with Manhattan distance and Diagonal Shortcut heuristics
 
 The program should be called with command line arguments indicating the world to be used (World1.txt, World2.txt) and then the heuristic (Manhattan, DiagonalShortcut). For example:
 
