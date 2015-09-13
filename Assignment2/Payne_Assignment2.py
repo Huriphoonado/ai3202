@@ -1,21 +1,26 @@
 # Willie Payne
 # CSCI 3202 Assignment 2
 
+# Implementation of A* Search
+
 import sys
 import copy
 
+# Node class containing all information needed for A* search
+# Initialized with an id, location, type, and weight all provided in World files
+# Nodes are stored in nodeDict, a dictionary representing our graph
 class Node(object):
 	def __init__(self, id, location, type, weight):
-		self.id = id
-		self.location = location
-		self.type = type # path, mountain, wall
+		self.id = id # '[x,y]'
+		self.location = location # [x,y]
+		self.type = type # 0 = path, 1 = mountain, 2 = wall
 		self.g = 0 # Distance to Start
 		self.h = 0 # Heuristic
 		self.f = 0 # g + h
 		self.weight = weight # Becomes 10 if node is a mountain
-		self.parent = None
+		self.parent = None # parent node used for determining path
 
-# Read in the map file to use and the heuristic type
+# Read in the map file to use and the heuristic type as commandline arguments
 # If either are invalid - return false
 def inputText():
 	if len(sys.argv) != 3:
@@ -24,7 +29,7 @@ def inputText():
 	elif sys.argv[1] != "World1.txt" and sys.argv[1] != "World2.txt":
 		print "Incorrect world supplied"
 		return (False, False)
-	elif sys.argv[2] != "Manhattan":
+	elif sys.argv[2] != "Manhattan" and sys.argv[2] != "DiagonalShortcut":
 		print "Incorrect heuristic supplied"
 		return (False, False)
 	else:
@@ -36,7 +41,11 @@ def readFile(fileName):
 	mapString = mapString.read()
 	return mapString
 
-def stringToList(mapString):
+# Reads the string and returns nodeDict, a dictionary of nodes
+# 	The node's key is the string of its coordinate
+# 	nodeDict is used to determine neighbor nodes, node types, and h value
+# 	aStar algorithm copies nodes on its path from nodeDict
+def stringToDict(mapString):
 	xPos = 0
 	yPos = 0
 	rows = mapString.split('\n')
@@ -71,7 +80,23 @@ def manhattanDistance(nodeDict, end):
 
 	for n in nodeDict:
 		xPos,yPos = nodeDict[n].location
-		nodeDict[n].h = (abs(endX - xPos) + abs(endY - yPos)) * 10
+		nodeDict[n].h = (abs(endX - xPos) + abs(endY - yPos)) * 10 # Reduced to 5 yields better results
+
+	return nodeDict
+
+# Subtracts the cost of steps saved by taking a diagonal 
+# From Game Programming Heuristics: http://theory.stanford.edu/%7Eamitp/GameProgramming/Heuristics.html
+def diagonalShortcut(nodeDict, end):
+	xPos, yPos = 0,0
+	dx, dy = 0,0
+	endX, endY = end.location
+	amountSaved = 14 - (2 * 10) 
+
+	for n in nodeDict:
+		xPos,yPos = nodeDict[n].location
+		dx = abs(endX - xPos)
+		dy = abs(endY - yPos)
+		nodeDict[n].h = (10 * (dx + dy)) + (amountSaved * min(dx, dy))
 
 	return nodeDict
 
@@ -89,7 +114,7 @@ def returnMinNode(opened):
 	return opened[pos]
 
 # If node is in the closed list - Don't look at it (return False)
-# Else consider it - return True
+# Else, consider it - return True
 def checkClosedList(currentNode, closed):
 	for n in closed:
 		if currentNode.id == n.id:
@@ -98,7 +123,7 @@ def checkClosedList(currentNode, closed):
 		return True
 
 # Calculates adjacent nodes  when provided a currentNode
-# 	Returns two lists - horizontal/vertical and diagonal
+# 	Returns two lists - horizontal/vertical nodes and diagonal nodes
 # 	Does not return walls or nodes in the closed list
 def returnAdjacentNodes(nodeDict, currentNode, closed):
 	xPos,yPos = currentNode.location
@@ -124,7 +149,6 @@ def returnAdjacentNodes(nodeDict, currentNode, closed):
 def replaceIfLower(opened, currentNode):
 	for n in opened:
 		if n.id == currentNode.id:
-			print n.id, n.parent.id, n.g, currentNode.id, currentNode.parent.id, currentNode.g
 			if n.g > currentNode.g:
 				n.g = currentNode.g
 				n.parent = currentNode.parent
@@ -133,20 +157,22 @@ def replaceIfLower(opened, currentNode):
 		opened.append(currentNode)
 	return opened
 
+# Traces the solution node's parents all the way back to the start
 def trackSolution(endNode, traveledList):
 	while endNode != None:
 		traveledList.insert(0,endNode.location)
 		endNode = endNode.parent
 	return traveledList
 
-# Horizontal and Vertical Moves cost 10
-# Diagonal Moves cost 14
-# Mountains cost an extra 10
+# A* Search - called with nodeDict initialized to selected heuristic
+# 	Horizontal and Vertical Moves cost 10, Diagonal Moves cost 14
+# 	Mountains cost an extra 10
 def aStar(nodeDict, start, end):
 	opened = []
 	closed = []
 	traveledList = []
 	opened.append(start)
+	nodesEvaluated = 0
 
 	while len(opened) > 0:
 		currentNode = returnMinNode(opened)
@@ -168,9 +194,11 @@ def aStar(nodeDict, start, end):
 				opened = replaceIfLower(opened, newNode)
 		else: # We have reached the solution so let's retrace our steps!
 			traveledList = trackSolution(currentNode, traveledList)
+			nodesEvaluated = len(closed) + len(opened)
+			
 			print 'Cost:', currentNode.g
-			print 'Number of Moves:', len(traveledList) - 1
-			print 'Nodes Visited (With Starting Point as x: 0, y: 0):'
+			print 'Total Nodes Evaluated:', nodesEvaluated
+			print len(traveledList), 'Nodes Visited on Path (With Starting Point as x: 0, y: 0):'
 			for n in traveledList:
 				print n[0], 7 - n[1]
 			
@@ -180,17 +208,16 @@ if __name__ == "__main__":
 	mapFile, hType = inputText()
 	
 	if mapFile != False:
-		'''if mapFile == 'World1.txt':
-			start = str([0,6]) # Starting/Ending points for World 1
-			end = str([9,0])
-		else:
-			start = str([0,7]) # Starting/Ending points for World 2
-			end = str([9,0])'''
-		start = str([0,7])
+		start = str([0,7]) # Start and end are same on both worlds
 		end = str([9,0])
 		mapString = readFile(mapFile) # Convert world file to string
-		nodeDict = stringToList(mapString) # Convert string to dictionary of nodes
+		nodeDict = stringToDict(mapString) # Convert string to dictionary of nodes
 		
-		if hType == 'Manhattan':
+		if hType == 'Manhattan': # set nodeDict to Manhattan heuristic and call A*
 			nodeDict = manhattanDistance(nodeDict, nodeDict[end])
 			aStar(nodeDict, nodeDict[start], nodeDict[end])
+
+		else: # set nodeDict to Diagonal Shortcut heuristic and call A*
+			nodeDict = diagonalShortcut(nodeDict, nodeDict[end])
+			aStar(nodeDict, nodeDict[start], nodeDict[end])
+
