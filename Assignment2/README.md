@@ -9,7 +9,7 @@ python Payne_Assignment2.py World1.txt Manhattan
 python Payne_Assignment2.py World2.txt DiagonalShortcut
 ```
 
-###Diagonal Sortcut Heuristic
+###Diagonal Shortcut Heuristic
 
 I chose to explore the Diagonal Shortcut heuristic because I noticed the Manhattan heuristic did not produce the best possible paths when only considering total horizontal and vertical distances. For example, in World 1 rather than taking a diagonal path and avoiding the mountains, the horse first travels up and then to the right crashing into mountains. This is because the heuristic is weighted so high and does not consider diagonal paths that a path space diagonal from the target node appears less favorable than a mountain space horizontal to the target node. (Reducing the weight of the Manhattan heuristic from 10 to 5 produces better results.)
 
