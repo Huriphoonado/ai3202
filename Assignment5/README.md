@@ -1,5 +1,4 @@
-Willie Payne
-CSCI 3202
+Willie Payne - CSCI 3202
 
 #Assignment 5
 
