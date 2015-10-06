@@ -66,7 +66,7 @@ Final Location: 9 7 Reward: 50.000
 This path crosses 17 nodes including one mountain, and one barn.
 
 Then I tried to determine the lowest epsilon value that produces a different solution. I found 450 which produces the following new path:
-
+```
 $ python Payne_Assignment5.py World1MDP.txt 450
 Location: 0 0 Utility: 0.362
 Location: 0 1 Utility: 0.450
@@ -85,5 +85,6 @@ Location: 6 7 Utility: 16.942
 Location: 7 7 Utility: 24.920
 Location: 8 7 Utility: 36.000
 Final Location: 9 7 Reward: 50.000
+```
 
 This path also crosses 17 nodes including one barn but it is worse than the previous solution since it crosses 3 mountains.
