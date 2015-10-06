@@ -201,15 +201,15 @@ def printVals(nodeList):
 # 	Prevents an infinite loop that can occur if two nodes point at each other
 def printPath(currentNode, lastNode):
 	if currentNode.type == 'terminal':
-		print "Final Location:", currentNode.location[0], currentNode.location[1], "Reward:", currentNode.utility
+		print "Final Location:", currentNode.location[0], currentNode.location[1], "Reward:", '%.3f' % currentNode.utility
 		return
 	elif currentNode.parent == lastNode:
 		print "The path ends here as two nodes are each other's best direction."
 		print "There is either an error, or the algorithm has found a local max"
-		print "Final Location:", currentNode.location[0], currentNode.location[1], "Utility:", currentNode.utility
+		print "Final Location:", currentNode.location[0], currentNode.location[1], "Utility:", '%.3f' % currentNode.utility
 		return
 	else:
-		print "Location:", currentNode.location[0], currentNode.location[1], "Utility:", currentNode.utility
+		print "Location:", currentNode.location[0], currentNode.location[1], "Utility:", '%.3f' % currentNode.utility
 		return printPath(currentNode.parent, lastNode)
 
 def main():
