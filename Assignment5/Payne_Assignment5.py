@@ -5,16 +5,6 @@
 
 import sys
 
-# discount factor y = 0.9
-# open square (0)
-# can't move through walls (2)
-# mountains - negative reward of -1.0 (1)
-# snakes - negative reward of -2.0 (3)
-# barn - positive reward of 5.0 (4)
-# goal state is 50
-# e is 5
-# transition model - successful .8 of the time, left .1 of the time, right .1 of the time
-
 # Node class containing all information needed for MDP
 # Initialized with an location, type, and reward all provided in World files
 # Nodes are stored in nodeList, a dictionary representing our graph
@@ -32,20 +22,17 @@ class Node(object):
 		self.east = None
 		self.west = None
 
-# Challenges I'm thinking about
-# 	What happens if parent node is an intentional bounce back to avoid negative points
-# 		Issue only in determing final path from what the directions are asking for
-# 	Confusion between rewards and utilities - should utilities be initialized to the reward?
-# 		May only affect initial iteration
-# 	How should I iterate?
-# 		If I iterate through all nodes, then 0-nodes may not change causing the loop to end early
-# 		Maybe could be changed with a state parameter
-
 	# Calculates the utility of the current node
 	# 	If one of the adjacent nodes is None - we bounce back and use the utility of the current
 	# 	node in our calculations
 	def calculateUtility(self):
 		y = 0.9 # discount factor
+
+		# Terminal node remains at 50
+		if self.type == 'terminal':
+			self.utility = self.reward
+			self.direction = 'Done'
+			return self.utility
 
 		# Determine what values to use in the calculation
 		if self.north != None:
@@ -65,15 +52,19 @@ class Node(object):
 		else:
 			westUtil = self.utility
 
+		# Transition Model Calculations
 		northOption = (0.8 * northUtil) + (0.1 * eastUtil) + (0.1 * westUtil)
 		southOption = (0.8 * southUtil) + (0.1 * eastUtil) + (0.1 * westUtil)
 		eastOption = (0.8 * eastUtil) + (0.1 * northUtil) + (0.1 * southUtil)
 		westOption = (0.8 * westUtil) + (0.1 * northUtil) + (0.1 * southUtil)
 
+		# Pick the highest calculated option
+		# 	Array stores utility, direction, and parent node
 		options = ([northOption, 'North', self.north], [southOption, 'South', self.south], 
 			[eastOption, 'East', self.east], [westOption, 'West', self.west])
 		bestOption = max(options)
 		
+		# Calculate equation via the provided utility
 		self.utility = self.reward + (y * bestOption[0])
 		self.direction = bestOption[1]
 		self.parent = bestOption[2]
@@ -99,7 +90,9 @@ def readFile(fileName):
 	return mapString
 
 # Reads the string and returns nodeList, a list of nodes
-# 	The node's position in the list is a mapping of its coordinate
+# 	The node's position in the list is a mapping of its coordinate nodeList[x][y]
+# 	The starting point in the list is nodeList[0][0]
+# 	nodeList is essentially our graph class
 def stringToList(mapString):
 	xPos = 0
 	yPos = 7
@@ -132,7 +125,7 @@ def stringToList(mapString):
 				reward = -2.0
 			elif r == '4':
 				pathType = 'barn'
-				reward = 5.0
+				reward = 1.0
 			else:
 				pathType = 'terminal'
 				reward = 50.0
@@ -144,7 +137,7 @@ def stringToList(mapString):
 	return nodeList
 
 # Takes in a list of nodes and sets each node's adjacent nodes to be correct pointers
-	# Remains none if the adjacent node is a wall or is outside the bounds of the map
+# 	Remains None if the adjacent node is a wall or is outside the bounds of the map
 def calcAdjNodes(nodeList):
 	xBound = 10
 	yBound = 8
@@ -152,28 +145,82 @@ def calcAdjNodes(nodeList):
 	for x in range(10):
 		for y in range(8):
 			current = nodeList[x][y]
-			if x + 1 < xBound and nodeList[x+1][y].type != 'wall':
-				current.east = nodeList[x+1][y]
-			if x - 1 >= 0 and nodeList[x-1][y].type != 'wall':
-				current.west = nodeList[x-1][y]
-			if y + 1 < yBound and nodeList[x][y+1].type != 'wall':
-				current.north = nodeList[x][y+1]
-			if y - 1 >= 0 and nodeList[x][y-1].type != 'wall':
-				current.south = nodeList[x][y-1]
+			if current.type != 'wall':
+				if x + 1 < xBound and nodeList[x+1][y].type != 'wall':
+					current.east = nodeList[x+1][y]
+				if x - 1 >= 0 and nodeList[x-1][y].type != 'wall':
+					current.west = nodeList[x-1][y]
+				if y + 1 < yBound and nodeList[x][y+1].type != 'wall':
+					current.north = nodeList[x][y+1]
+				if y - 1 >= 0 and nodeList[x][y-1].type != 'wall':
+					current.south = nodeList[x][y-1]
 	return nodeList
 
-if __name__ == "__main__":
+# Iterate through the loop and keep track of the biggest delta value
+# 	Continue until biggest delta is greater than minChange
+def ValueIteration(nodeList, minChange):
+	maxChangeInCycle = minChange + 1
+	iterate = 0
+	while maxChangeInCycle > minChange:
+		maxChangeInCycle = 0
+		iterate = iterate + 1
+		#print iterate
+		for y in range(7, -1, -1):
+				for x in range(9, -1, -1):
+					if nodeList[x][y].type != 'wall':
+						oldUtil = nodeList[x][y].utility
+						newUtil = nodeList[x][y].calculateUtility()
+						currentChange = abs(oldUtil - newUtil)
+						if currentChange > maxChangeInCycle:
+							maxChangeInCycle = currentChange
+
+	return nodeList
+
+# Simply prints all the values in the map arranged in nice columns
+# 	Helps in practice to gather all the utilities and directions
+def printVals(nodeList):
+	nodeListFormatted = []
+
+	for k in range(8):
+		nodeListFormatted.append([])
+		for j in range(10):
+			nodeListFormatted[k].append(None)
+
+	for y in range(8):
+		for x in range(10):
+			if nodeList[x][y].type != 'wall':
+				nodeListFormatted[7-y][x] = str(nodeList[x][y].direction)
+			else:
+				nodeListFormatted[7-y][x] = 'Wall'
+
+	col_width = max(len(word) for row in nodeListFormatted for word in row) + 2
+	for row in nodeListFormatted:
+		print "".join(word.ljust(col_width) for word in row)
+
+# Prints the path taken from a node to its parent nodes to the terminal
+# 	Prevents an infinite loop that can occur if two nodes point at each other
+def printPath(currentNode, lastNode):
+	if currentNode.type == 'terminal':
+		print "Final Location:", currentNode.location[0], currentNode.location[1], "Reward:", currentNode.utility
+		return
+	elif currentNode.parent == lastNode:
+		print "The path ends here as two nodes are each other's best direction."
+		print "There is either an error, or the algorithm has found a local max"
+		print "Final Location:", currentNode.location[0], currentNode.location[1], "Utility:", currentNode.utility
+		return
+	else:
+		print "Location:", currentNode.location[0], currentNode.location[1], "Utility:", currentNode.utility
+		return printPath(currentNode.parent, lastNode)
+
+def main():
 	mapFile, eVal = inputText()
 	if mapFile != False and eVal != False:
 		minChange = (eVal * .1)/.9
 		mapString = readFile(mapFile)
 		nodeList = stringToList(mapString)
 		nodeList = calcAdjNodes(nodeList)
-		print nodeList[9][7].calculateUtility()
-		print nodeList[8][7].calculateUtility()
-		print nodeList[8][7].direction
-		print nodeList[7][7].calculateUtility()
-		for y in range(7, -1, -1):
-			for x in range(10):
-				print mapList[x][y].utility,
-			print ''
+		nodeList = ValueIteration(nodeList, minChange)
+		printPath(nodeList[0][0], None)
+
+if __name__ == "__main__":
+	main()
