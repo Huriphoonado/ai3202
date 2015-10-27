@@ -35,15 +35,46 @@ def cancerProb():
 	val4 = cancer.probDist["high"]["F"] * (1 - smoker.probDist["T"]) * ((1 - pollution.probDist["low"]))
 	return val1 + val2 + val3 + val4
 
+# P(c|d,s) = P(c,d,s)/P(d,s) = P(d|c)P(c|p,s)P(p)P(s) + P(d|c)P(c|!p,s)P(!p)P(s)
+#							 ------------------------------------------------- = 
+#							 P(d|c)P(c|p,s)P(p)P(s) [four of these for changing c and p]
+# (.65*.05*.1*.3) + (.65*.3*.9*.3)
+
+# We know smoking is True, either pollution or smoking is also True
+def intercausal(findNode, givenNode):
+	# Easiest Case
+	if (findNode == givenNode) or findNode == cancer:
+		return 1
+	# Causal Chain Rule Case - We know cancer so no need to care about its parents
+	elif findNode.name == "XRay" or findNode.name == "Dyspnoea":
+		return predictive(findNode, cancer)
+	# Hard Case - Causes (smoker and pollution) are conditionally dependent
+	else:
+		if givenNode.name == "Smoker":
+			bayesValNum = (cancer.probDist["low"]["T"] * findNode.probDist["low"])
+			bayesValDenom = ((cancer.probDist["low"]["T"] * findNode.probDist["low"]) + (cancer.probDist["high"]["T"] * (1 - findNode.probDist["low"])))
+			bayesVal = bayesValNum/bayesValDenom
+			return bayesVal
+		else:
+			bayesValNum = (cancer.probDist["low"]["T"] * findNode.probDist["T"])
+			bayesValDenom = ((cancer.probDist["low"]["T"] * findNode.probDist["T"]) + (cancer.probDist["low"]["F"] * (1 - findNode.probDist["T"])))
+			bayesVal = bayesValNum/bayesValDenom
+			return bayesVal
+
 def predictive(findNode, givenNode):
+	# Easiest Case
 	if findNode == givenNode:
 		return 1
-	# Knowing one node will not affect another independent node 
+	# Easy Case - Knowing one node will not affect another independent node 
 	elif (findNode.name == 'Pollution' and givenNode.name == 'Smoker') or (findNode.name == 'Pollution' and givenNode.name == 'Smoker'):
 		if 'T' in findNode.probDist:
-			findNode.probDist['T']
+			return findNode.probDist['T']
 		else:
-			1 - findNode.probDist['low'] # Again - table asks for pollution to be high
+			return findNode.probDist['low'] # Again - table asks for pollution to be high
+	# Easy Case
+	elif givenNode.name == 'Cancer':
+		return findNode.probDist['T']
+	# Harder Case
 	elif findNode.name == 'Cancer':
 		if givenNode.name == 'Smoker':
 			val1 = cancer.probDist["low"]["T"] * pollution.probDist["low"]
@@ -53,6 +84,10 @@ def predictive(findNode, givenNode):
 			val1 = cancer.probDist["low"]["T"] * smoker.probDist["T"]
 			val2 = cancer.probDist["low"]["F"] * (1 - smoker.probDist["T"])
 			return val1 + val2
+	# Harder Case - calculate by whether or not cancer occurs via new cancer value
+	else:
+		newCancerVal = predictive(cancer, givenNode)
+		return (newCancerVal * findNode.probDist['T']) + ((1 - newCancerVal) * findNode.probDist['F']) 
 
 # Diagnostic reasoning based off of Table 2.2
 # 	Works in some extra cases, but not all 
@@ -67,7 +102,7 @@ def diagnostic(findNode, givenNode):
 		if findNode.name == 'Cancer': # we know either dyspnoia or xray
 			bayesVal = (givenNode.probDist['T'] * cancerProb())/margProb(givenNode)
 			return bayesVal
-		# Not used in the example table
+		# Used in the Intercausal Table
 		elif findNode.name == 'Pollution':
 			helperVal =  predictive(cancer, findNode)
 			bayesVal =  (helperVal * findNode.probDist['low']) / cancerProb()
@@ -76,6 +111,11 @@ def diagnostic(findNode, givenNode):
 			helperVal =  predictive(cancer, findNode)
 			bayesVal =  (helperVal * findNode.probDist['T']) / cancerProb()
 			return bayesVal
+
+	# harder calculation  using joint probabilities
+	elif findNode.name == 'XRay' or findNode.name == 'Dyspnoea':
+		newCancerVal = diagnostic(cancer, givenNode)
+		return (newCancerVal * findNode.probDist['T']) + ((1 - newCancerVal) * findNode.probDist['F'])
 	
 	# hardest calculation - eg findNode is Pollution, givenNode is Dyspnoia
 	else: 
@@ -106,7 +146,7 @@ def diagnostic(findNode, givenNode):
 			val8 = (1 - cancer.probDist["high"]["F"]) * (1 - extraNode.probDist["T"]) * (1 - findNode.probDist["low"])
 			helperVal1 = (val1 + val2 + val3 + val4)/(val5 + val6 + val7 + val8)
 			helperVal2 = margProb(givenNode)
-			bayesVal = (helperVal1 * (1 - findNode.probDist["low"]))/helperVal2
+			bayesVal = (helperVal1 * (findNode.probDist["low"]))/helperVal2
 			return bayesVal
 
 # Will calculate the marginal probability of any node that has been given
@@ -117,23 +157,64 @@ def margProb(findNode):
 	elif findNode.name == 'Cancer':
 		return cancerProb()
 	elif findNode.name == 'Pollution':
-		findNode.probDist["high"]
+		return findNode.probDist["low"]
 	else:
-		findNode.probDist["T"]
+		return findNode.probDist["T"]
 
 def jointProb():
 	pass
 
-
 def inputs():
 	pass
+
+def tests():
+	# Column 1
+	print('--------Column 1--------')
+	print 1 - margProb(pollution)
+	print margProb(smoker)
+	print margProb(cancer)
+	print margProb(xray)
+	print margProb(dyspnoea)
+
+	# Column 2
+	print('--------Column 2--------')
+	print 1 - diagnostic(pollution, dyspnoea)
+	print diagnostic(smoker, dyspnoea)
+	print diagnostic(cancer, dyspnoea)
+	print diagnostic(xray, dyspnoea)
+	print diagnostic(dyspnoea, dyspnoea)
+	
+	# Column 3
+	print('--------Column 3--------')
+	print 1 - predictive(pollution, smoker)
+	print predictive(smoker, smoker)
+	print predictive(cancer, smoker)
+	print predictive(xray, smoker)
+	print predictive(dyspnoea, smoker)
+
+	# Column 4
+	print('--------Column 4--------')
+	print 1 - diagnostic(pollution, cancer)
+	print diagnostic(smoker, cancer)
+	print diagnostic(cancer, cancer)
+	print predictive(xray, cancer)
+	print predictive(dyspnoea, cancer)
+
+	# Column 5
+	print('--------Column 5--------')
+	print 1 - intercausal(pollution, smoker)
+	print intercausal(smoker, smoker)
+	print intercausal(cancer, smoker)
+	print intercausal(xray, smoker)
+	print intercausal(dyspnoea, smoker)
+
+
 
 def main():
 	global pollution, smoker, xray, dyspnoea, cancer
 	pollution, smoker, xray, dyspnoea, cancer = initVars()
-	print diagnostic(pollution, dyspnoea)
-	#print diagnostic(cancer, dyspnoea)
-	print predictive(cancer, smoker)
+	tests()
+
 
 if __name__ == "__main__":
 	main()
