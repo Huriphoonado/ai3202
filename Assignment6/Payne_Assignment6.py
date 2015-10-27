@@ -35,10 +35,26 @@ def cancerProb():
 	val4 = cancer.probDist["high"]["F"] * (1 - smoker.probDist["T"]) * ((1 - pollution.probDist["low"]))
 	return val1 + val2 + val3 + val4
 
-# P(c|d,s) = P(c,d,s)/P(d,s) = P(d|c)P(c|p,s)P(p)P(s) + P(d|c)P(c|!p,s)P(!p)P(s)
-#							 ------------------------------------------------- = 
-#							 P(d|c)P(c|p,s)P(p)P(s) [four of these for changing c and p]
-# (.65*.05*.1*.3) + (.65*.3*.9*.3)
+# Updated beliefs when one parent node and one child node is known to be true
+def combined(findNode, parentNode, childNode):
+	# Easiest case
+	if (findNode == parentNode) or (findNode == childNode):
+		return 1
+	# Easier -  Parent nodes are independent so we can simply use diagnostic reasoning
+	elif (findNode.name == "Smoker") or (findNode.name == "Pollution"):
+		return diagnostic(findNode, childNode)
+	# Hard - Bayes Rule relying on earlier calculations
+	else:
+		if findNode.name == "Cancer":
+			# P(C|D,S) = (P(D|C,S) * P(C|S))/P(D|S) = (P(D|C) * P(C|S))/P(D|S)
+			val1 = predictive(childNode, findNode)
+			val2 = predictive(findNode, parentNode)
+			val3 = predictive(childNode, parentNode)
+			return (val1 * val2)/val3
+		# We are looking for one of the child nodes
+		else:
+			newCancerVal = combined(cancer, parentNode, childNode)
+			return (newCancerVal * findNode.probDist['T']) + ((1 - newCancerVal) * findNode.probDist['F'])
 
 # We know smoking is True, either pollution or smoking is also True
 def intercausal(findNode, givenNode):
@@ -146,7 +162,7 @@ def diagnostic(findNode, givenNode):
 			val8 = (1 - cancer.probDist["high"]["F"]) * (1 - extraNode.probDist["T"]) * (1 - findNode.probDist["low"])
 			helperVal1 = (val1 + val2 + val3 + val4)/(val5 + val6 + val7 + val8)
 			helperVal2 = margProb(givenNode)
-			bayesVal = (helperVal1 * (findNode.probDist["low"]))/helperVal2
+			bayesVal = (helperVal1 * (1 - findNode.probDist["low"]))/helperVal2 # pollution = high
 			return bayesVal
 
 # Will calculate the marginal probability of any node that has been given
@@ -167,7 +183,10 @@ def jointProb():
 def inputs():
 	pass
 
-def tests():
+def tests(smokerVal):
+
+	smoker.probDist["T"] = smokerVal
+
 	# Column 1
 	print('--------Column 1--------')
 	print 1 - margProb(pollution)
@@ -178,7 +197,7 @@ def tests():
 
 	# Column 2
 	print('--------Column 2--------')
-	print 1 - diagnostic(pollution, dyspnoea)
+	print diagnostic(pollution, dyspnoea)
 	print diagnostic(smoker, dyspnoea)
 	print diagnostic(cancer, dyspnoea)
 	print diagnostic(xray, dyspnoea)
@@ -208,12 +227,18 @@ def tests():
 	print intercausal(xray, smoker)
 	print intercausal(dyspnoea, smoker)
 
-
+	# Column 6
+	print('--------Column 6--------')
+	print combined(pollution, smoker, dyspnoea)
+	print combined(smoker, smoker, dyspnoea)
+	print combined(cancer, smoker, dyspnoea)
+	print combined(xray, smoker, dyspnoea)
+	print combined(dyspnoea, smoker, dyspnoea)
 
 def main():
 	global pollution, smoker, xray, dyspnoea, cancer
 	pollution, smoker, xray, dyspnoea, cancer = initVars()
-	tests()
+	tests(0.3)
 
 
 if __name__ == "__main__":
