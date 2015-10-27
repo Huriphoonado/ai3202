@@ -35,15 +35,49 @@ def cancerProb():
 	val4 = cancer.probDist["high"]["F"] * (1 - smoker.probDist["T"]) * ((1 - pollution.probDist["low"]))
 	return val1 + val2 + val3 + val4
 
-# eg findNode is 
+def predictive(findNode, givenNode):
+	if findNode == givenNode:
+		return 1
+	# Knowing one node will not affect another independent node 
+	elif (findNode.name == 'Pollution' and givenNode.name == 'Smoker') or (findNode.name == 'Pollution' and givenNode.name == 'Smoker'):
+		if 'T' in findNode.probDist:
+			findNode.probDist['T']
+		else:
+			1 - findNode.probDist['low'] # Again - table asks for pollution to be high
+	elif findNode.name == 'Cancer':
+		if givenNode.name == 'Smoker':
+			val1 = cancer.probDist["low"]["T"] * pollution.probDist["low"]
+			val2 = cancer.probDist["high"]["T"] * (1 - pollution.probDist["low"])
+			return val1 + val2
+		elif givenNode.name == 'Pollution':
+			val1 = cancer.probDist["low"]["T"] * smoker.probDist["T"]
+			val2 = cancer.probDist["low"]["F"] * (1 - smoker.probDist["T"])
+			return val1 + val2
+
+# Diagnostic reasoning based off of Table 2.2
+# 	Works in some extra cases, but not all 
+# 	tilda only works when solving for pollution = high
 def diagnostic(findNode, givenNode):
 	# easiest calculation
 	if findNode == givenNode:
 		return 1
-	# harder calculation
+	
+	# harder calculations using Bayes Rule
 	elif givenNode.name == 'Cancer' or findNode.name == 'Cancer':
-		pass
-	# hardest calculation - eg findNode is Pollution, givenNode is Dys
+		if findNode.name == 'Cancer': # we know either dyspnoia or xray
+			bayesVal = (givenNode.probDist['T'] * cancerProb())/margProb(givenNode)
+			return bayesVal
+		# Not used in the example table
+		elif findNode.name == 'Pollution':
+			helperVal =  predictive(cancer, findNode)
+			bayesVal =  (helperVal * findNode.probDist['low']) / cancerProb()
+			return bayesVal
+		else:
+			helperVal =  predictive(cancer, findNode)
+			bayesVal =  (helperVal * findNode.probDist['T']) / cancerProb()
+			return bayesVal
+	
+	# hardest calculation - eg findNode is Pollution, givenNode is Dyspnoia
 	else: 
 		if findNode.name == 'Smoker':
 			extraNode = pollution
@@ -72,7 +106,6 @@ def diagnostic(findNode, givenNode):
 			val8 = (1 - cancer.probDist["high"]["F"]) * (1 - extraNode.probDist["T"]) * (1 - findNode.probDist["low"])
 			helperVal1 = (val1 + val2 + val3 + val4)/(val5 + val6 + val7 + val8)
 			helperVal2 = margProb(givenNode)
-			print helperVal2
 			bayesVal = (helperVal1 * (1 - findNode.probDist["low"]))/helperVal2
 			return bayesVal
 
@@ -99,6 +132,8 @@ def main():
 	global pollution, smoker, xray, dyspnoea, cancer
 	pollution, smoker, xray, dyspnoea, cancer = initVars()
 	print diagnostic(pollution, dyspnoea)
+	#print diagnostic(cancer, dyspnoea)
+	print predictive(cancer, smoker)
 
 if __name__ == "__main__":
 	main()
