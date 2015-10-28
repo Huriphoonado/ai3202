@@ -1,17 +1,18 @@
 # Willie Payne
 # 10/18
 # Assignment 6 - Bayes Net Disease Predictor
+
 import sys
 import getopt
 
 class Node(object):
 	def __init__(self, name, probDist):
-		self.name = name
-		self.probDist = probDist
-		self.edge = None
-		self.parent = None
+		self.name = name 
+		self.probDist = probDist # Node's probability distribution
+		self.edge = None # List of children
+		self.parent = None # List of Parents
 
-# In order to make life easier, I am calling "low" for Pollution, "T"
+# Simply initializes and returns all of the nodes given the assignment
 def initVars():
 	pollution = Node("Pollution", {"low": 0.9})
 	smoker = Node("Smoker", {"T": 0.3})
@@ -187,8 +188,18 @@ def margProb(findNode):
 	else:
 		return findNode.probDist["T"]
 
-def jointProb():
-	pass
+# Not fully implemented - will calculate joint probabilities given the assignment guidelines
+def jointProb(input):
+	if input == "psc":
+		return (pollution.probDist["low"] * smoker.probDist["T"] * cancer.probDist["low"]["T"])
+	elif input == "~p~s~c":
+		return ((1 - pollution.probDist["low"]) * (1 - smoker.probDist["T"]) * cancer.probDist["high"]["F"])
+	else:
+		val1 = (pollution.probDist["low"] * smoker.probDist["T"] * cancer.probDist["low"]["T"])
+		val2 = (pollution.probDist["low"] * (1 - smoker.probDist["T"]) * cancer.probDist["low"]["F"])
+		val3 = ((1 - pollution.probDist["low"]) * smoker.probDist["T"] * cancer.probDist["high"]["T"])
+		val4 = ((1 - pollution.probDist["low"]) * (1 - smoker.probDist["T"]) * cancer.probDist["high"]["F"])
+		return (val1, val2, val3, val4)
 
 # Simply sets the probability distribution value of the node given to the prior
 def setPrior(findNode, prior):
@@ -280,12 +291,11 @@ def inputs():
 		sys.exit(2)
 	for o, a in opts:
 		if o in ("-p"):
-			print "flag", o
-			print "args", a
-			print a[0]
-			print float(a[1:])
-			#setting the prior here works if the Bayes net is already built
-			#setPrior(a[0], float(a[1:])
+			if type(returnNode(a)) == tuple:
+				findNode = returnNode(a)[0]
+			else:
+				findNode = returnNode(a[0])
+			setPrior(findNode, float(a[1:]))
 		
 		elif o in ("-m"):
 			if type(returnNode(a)) == tuple:
@@ -312,8 +322,7 @@ def inputs():
 			print conditionalProb(findNode, flag, givenNodeList)
 
 		elif o in ("-j"):
-			print "flag", o
-			print "args", a
+			print jointProb(a)
 		else:
 			assert False, "unhandled option"
 
