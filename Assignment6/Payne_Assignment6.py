@@ -1,7 +1,7 @@
 # Willie Payne
 # 10/18
 # Assignment 6 - Bayes Net Disease Predictor
-
+import sys
 import getopt
 
 class Node(object):
@@ -34,6 +34,14 @@ def cancerProb():
 	val3 = cancer.probDist["high"]["T"] * smoker.probDist["T"] * (1 - pollution.probDist["low"])
 	val4 = cancer.probDist["high"]["F"] * (1 - smoker.probDist["T"]) * ((1 - pollution.probDist["low"]))
 	return val1 + val2 + val3 + val4
+
+# Both parent nodes are known
+def easyCombined(findNode, flag):
+	return "Combined calculation with two known parent nodes not yet supported."
+
+# Both child nodes are known
+def easyCombined(findNode, flag):
+	return "Combined calculation with two known child nodes not yet supported."
 
 # Updated beliefs when one parent node and one child node is known to be true
 def combined(findNode, parentNode, childNode, flag):
@@ -182,6 +190,87 @@ def margProb(findNode):
 def jointProb():
 	pass
 
+# Simply sets the probability distribution value of the node given to the prior
+def setPrior(findNode, prior):
+	if "low" in findNode.probDist:
+		findNode.probDist["low"] = prior
+		return prior
+	else:
+		findNode.probDist["T"] = prior
+		return prior
+
+# Given an inputted letter - will return a node and if necessary a flagf
+# 	Used for marginal probability and conditional probability
+def returnNode(nodeLetter):
+	if nodeLetter == 'P':
+		return pollution
+	elif nodeLetter == 'S':
+		return smoker
+	elif nodeLetter == 'C':
+		return cancer
+	elif nodeLetter == 'D':
+		return dyspnoea
+	elif nodeLetter == 'X':
+		return xray
+	elif nodeLetter == 'p':
+		return (pollution, 0)
+	elif nodeLetter == 's':
+		return (smoker, 0)
+	elif nodeLetter == 'c':
+		return (cancer, 0)
+	elif nodeLetter == 'd':
+		return (dyspnoea, 0)
+	elif nodeLetter == 'x':
+		return (xray, 0)
+	elif nodeLetter == '~p':
+		return (pollution, 1)
+	elif nodeLetter == '~s':
+		return (smoker, 1)
+	elif nodeLetter == '~c':
+		return (cancer, 1)
+	elif nodeLetter == '~d':
+		return (dyspnoea, 1)
+	elif nodeLetter == '~x':
+		return (xray, 1)
+
+# Determines the type of evidence we have and calls the correct calculation function
+def conditionalProb(findNode, flag, givenNodeList):
+	# No Evidence
+	if len(givenNodeList) == 0:
+		return abs(flag - margProb(findNode))
+	# One Piece of Evidence
+	elif len(givenNodeList) == 1:
+		givenNode = givenNodeList[0]
+		# Predictive
+		if givenNode.name == "Pollution" or givenNode.name == "Smoker":
+			return predictive(findNode, givenNode, flag)
+		# Diagnostic
+		elif givenNode.name == "Dyspnoea" or givenNode.name == "XRay":
+			return diagnostic(findNode, givenNode, flag)
+		# Intercausal
+		else:
+			if findNode.name == "Pollution" or findNode.name == "Smoker":
+				return diagnostic(findNode, givenNode, flag)
+			else:
+				return predictive(findNode, givenNode, flag)
+	else:
+		# Intercausal (May not support intercausal where a child node is known)
+		if givenNodeList[0].name == "Cancer":
+			return intercausal(findNode, givenNodeList[1], flag)
+		elif givenNodeList[1].name == "Cancer":
+			return intercausal(findNode, givenNodeList[0], flag)
+		# Combined - Determine the type of combination
+		elif givenNodeList[0].name == "Smoker" or givenNodeList[0].name == "Pollution":
+			if givenNodeList[1].name == "Smoker" or givenNodeList[1].name == "Pollution":
+				return easyCombined(findNode, flag)
+			elif givenNodeList[1].name == "Dyspnoea" or givenNodeList[1].name == "XRay":
+				return combined(findNode, givenNodeList[0], givenNodeList[1], flag)
+		else:
+			if givenNodeList[1].name == "Smoker" or givenNodeList[1].name == "Pollution":
+				return combined(findNode, givenNodeList[1], givenNodeList[0], flag)
+			else:
+				return hardCombined(findNode, flag)
+
 def inputs():
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "m:g:j:p:")
@@ -197,22 +286,31 @@ def inputs():
 			print float(a[1:])
 			#setting the prior here works if the Bayes net is already built
 			#setPrior(a[0], float(a[1:])
+		
 		elif o in ("-m"):
-			print "flag", o
-			print "args", a
-			print type(a)
-			#calcMarginal(a)
+			if type(returnNode(a)) == tuple:
+				print margProb(returnNode(a)[0])
+			else:
+				print margProb(returnNode(a))
+		
 		elif o in ("-g"):
-			print "flag", o
-			print "args", a
-			print type(a)
-			'''you may want to parse a here and pass the left of |
-			and right of | as arguments to calcConditional
-			'''
 			p = a.find("|")
-			print a[:p]
-			print a[p+1:]
-			#calcConditional(a[:p], a[p+1:])
+			if type(returnNode(a[:p])) == tuple:
+				findNode, flag = returnNode(a[:p])
+			else:
+				findNode, flag = (returnNode(a[:p]), 0)
+			givenNodeList = []
+			if len(a[p+1:]) == 1:
+				givenNodeList.append(returnNode(a[p+1]))
+			elif len(a[p+1:]) == 2:
+				givenNodeList.append(returnNode(a[p+1]))
+				givenNodeList.append(returnNode(a[p+2]))
+			elif len(a[p+1:]) > 2:
+				print "Ignoring last value(s)"
+				givenNodeList.append(returnNode(a[p+1]))
+				givenNodeList.append(returnNode(a[p+2]))
+			print conditionalProb(findNode, flag, givenNodeList)
+
 		elif o in ("-j"):
 			print "flag", o
 			print "args", a
@@ -274,7 +372,8 @@ def tests(smokerVal):
 def main():
 	global pollution, smoker, xray, dyspnoea, cancer
 	pollution, smoker, xray, dyspnoea, cancer = initVars()
-	tests(0.3)
+	#tests(0.3)
+	inputs()
 
 if __name__ == "__main__":
 	main()
