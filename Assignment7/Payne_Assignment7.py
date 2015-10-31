@@ -64,6 +64,7 @@ def priorSampling(samples, c, s, r, w):
 
 	return worldStates
 
+# Question 1 on the Homework
 def solvePriorities(worldStates):
 	size = float(len(worldStates))
 	prob1, prob2, prob3, prob4 = 0., 0., 0., 0.
@@ -97,10 +98,46 @@ def solvePriorities(worldStates):
 
 	return prob1/size, prob2/prob2Count, prob3/prob3Count, prob4/prob4Count
 
+# Question 2 on the Homework
+def solveExact(c, s, r, w):
+	prob1, prob2, prob3, prob4 = 0., 0., 0., 0.
+
+	# Problem 1 - P(c = true)
+	prob1 = c["T"]
+
+	# Problem 2 - P(c = true | rain = true)
+	# 	P(C|R) = (P(R|C)P(C))/P(R)
+	rainProb = (c["T"] * r["T"]) + ((1 - c["T"]) * r["F"])
+	prob2 = (r["T"] * c["T"])/rainProb
+
+	# Problem 3 - P(s=true|w=true)
+	# 	P(S|W) = (P(W|S)P(S))/P(W)
+	sprinklerProb = (c["T"] * s["T"]) + ((1 - c["T"]) * s["F"])
+	wet1 = sprinklerProb * rainProb * w["T"]["T"]
+	wet2 = sprinklerProb * (1 - rainProb) * w["T"]["F"]
+	wet3 = (1 - sprinklerProb) * rainProb * w["F"]["T"]
+	wet4 = (1 - sprinklerProb) * (1 - rainProb) * w["F"]["F"]
+	wetProb = wet1 + wet2 + wet3 + wet4
+	grassGivenSprinkler = (r["T"]* w["T"]["T"]) + (r["F"] * w["T"]["F"])
+	prob3 = (grassGivenSprinkler * sprinklerProb)/wetProb
+
+	# Problem 4 - P(s=true|c=true,w=true)
+	# 	Update the sprinkler and wet grass values given that it is cloudy, then use Bayes Rule
+	sprinklerGivenCloudy = s["T"]
+	newWet1 = s["T"] * r["T"] * w["T"]["T"]
+	newWet2 = s["T"] * (1 - r["T"]) * w["T"]["F"]
+	newWet3 = (1 - s["T"]) * r["T"] * w["F"]["T"]
+	newWet4 = (1 - s["T"]) * (1 - r["T"]) * w["F"]["F"]
+	newWetProb = newWet1 + newWet2 + newWet3 + newWet4
+	prob4 = (grassGivenSprinkler * sprinklerGivenCloudy)/newWetProb
+
+	return prob1, prob2, prob3, prob4
+	
 def main():
 	samples, c, s, r, w = initVars()
 	worldStates = priorSampling(samples, c, s, r, w)
 	print solvePriorities(worldStates)
+	print solveExact(c,s,r,w)
 
 
 if __name__ == "__main__":
