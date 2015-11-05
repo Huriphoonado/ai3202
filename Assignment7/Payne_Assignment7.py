@@ -159,9 +159,8 @@ def rejSampling(samples, c, s, r, w):
 	prob2 = prob2/prob2Count
 
 	# Problem 3 - P(s=true|w=true)
-	# 	Do I still need cloudy to do this calculation correctly?
 	# 	First val = cloudy, then sprinkler, then wet grass
-	# 	What do I do with rain - assume True?
+	# 	I am simply assuming rain is True
 	for i in range(0, len(samples) - 1, 3):
 		if samples[i] <= c["T"]:
 			if samples[i+1] <= s["T"]:
@@ -186,7 +185,7 @@ def rejSampling(samples, c, s, r, w):
 
 	# Problem 4 - P(s=true|c=true,w=true)
 	# 	First val = cloudy, then sprinkler, then wet grass
-	# 	What do I do with rain - assume True?
+	# 	I am simply assuming rain is True
 	for i in range(0, len(samples) - 1, 3):
 		if samples[i] <= c["T"]:
 			if samples[i+1] <= s["T"]:
