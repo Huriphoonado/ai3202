@@ -23,13 +23,13 @@ def initVars():
 	r = {"T": .8, "F": .2}
 	w = {"T": {"T": .99, "F": .9}, "F": {"T": .9, "F": 0}} # w[S][R]
 
-	return organized_samples, c, s, r, w
+	return samples, organized_samples, c, s, r, w
 
 # Iterate through the list of numbers keeping track of the world state
 # 	Order: C -> S -> R -> W
 def priorSampling(samples, c, s, r, w):
 	cCount, sCount, rCount, wCount = 0, 0, 0, 0
-	cState, sState, rState, = "T", "T", "T"
+	cState, sState, rState, wState = "T", "T", "T", "T"
 	size = float(len(samples))
 	worldStates = []
 
@@ -65,7 +65,7 @@ def priorSampling(samples, c, s, r, w):
 	return worldStates
 
 # Question 1 on the Homework
-def solvePriorities(worldStates):
+def solvePriors(worldStates):
 	size = float(len(worldStates))
 	prob1, prob2, prob3, prob4 = 0., 0., 0., 0.
 	prob2Count, prob3Count, prob4Count = 0., 0., 0.
@@ -132,12 +132,85 @@ def solveExact(c, s, r, w):
 	prob4 = (grassGivenSprinkler * sprinklerGivenCloudy)/newWetProb
 
 	return prob1, prob2, prob3, prob4
+
+# Question 3 on the Homework
+def rejSampling(samples, c, s, r, w):
+	prob1, prob2, prob3, prob4 = 0., 0., 0., 0.
+	prob2Count, prob3Count, prob4Count = 0., 0., 0.
+
+	# Problem 1 - P(c = true)
+	for sample in samples:
+		if sample <= c["T"]:
+			prob1 = prob1 + 1
+	prob1 = prob1/len(samples)
+
+	# Problem 2 - P(c = true | rain = true)
+	# 	Look at 50 pairs of numbers considering cloudy and then rain
+	# 	How do I look at rain first?
+	for i in range(0, len(samples), 2):
+		# Case where both are true
+		if samples[i] <= c["T"]:
+			if samples[i+1] <= r["T"]:
+				prob2Count = prob2Count + 1
+				prob2 = prob2 + 1
+		# Case where only rain is True
+		elif samples[i+1] <= r["F"]:
+			prob2Count = prob2Count + 1
+	prob2 = prob2/prob2Count
+
+	# Problem 3 - P(s=true|w=true)
+	# 	Do I still need cloudy to do this calculation correctly?
+	# 	First val = cloudy, then sprinkler, then wet grass
+	# 	What do I do with rain - assume True?
+	for i in range(0, len(samples) - 1, 3):
+		if samples[i] <= c["T"]:
+			if samples[i+1] <= s["T"]:
+				# Case where all are true
+				if samples[i+2] <= w["T"]:
+					prob3Count = prob3Count + 1
+					prob3 = prob3 + 1
+			# Case where wet grass, but not sprinkler true
+			elif samples[i+2] <= s["F"]:
+				prob3Count = prob3Count + 1
+		# Same cases when it is not cloudy
+		else:
+			if samples[i+1] <= s["F"]:
+				# Case where all are true
+				if samples[i+2] <= w["T"]["T"]:
+					prob3Count = prob3Count + 1
+					prob3 = prob3 + 1
+			# Case where wet grass, but not sprinkler true
+			elif samples[i+2] <= w["F"]["T"]:
+				prob3Count = prob3Count + 1
+	prob3 = prob3/prob3Count
+
+	# Problem 4 - P(s=true|c=true,w=true)
+	# 	First val = cloudy, then sprinkler, then wet grass
+	# 	What do I do with rain - assume True?
+	for i in range(0, len(samples) - 1, 3):
+		if samples[i] <= c["T"]:
+			if samples[i+1] <= s["T"]:
+				# Case where all are True
+				if samples[i+2] <= w["T"]["T"]:
+					prob4Count = prob4Count + 1
+					prob4 = prob4 + 1
+			# Case where cloudy and Sprinkler true, wet grass false
+				else:
+				 prob4Count = prob4Count + 1
+		else:
+			# Case where cloudy is false, sprinkler is true
+			if samples[i+1] <= s["F"]:
+				prob4Count = prob4Count + 1
+	prob4 = prob4/prob4Count
+
+	return prob1, prob2, prob3, prob4
 	
 def main():
-	samples, c, s, r, w = initVars()
-	worldStates = priorSampling(samples, c, s, r, w)
-	print solvePriorities(worldStates)
+	samples, org_samples, c, s, r, w = initVars()
+	worldStates = priorSampling(org_samples, c, s, r, w)
+	print solvePriors(worldStates)
 	print solveExact(c,s,r,w)
+	print rejSampling(samples, c, s, r, w)
 
 
 if __name__ == "__main__":
