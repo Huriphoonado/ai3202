@@ -1,6 +1,9 @@
 # Assignment 8
 # Willie Payne
 
+# Run by calling the data file as a commandline argument For example:
+# $ python Payne_Assignment8.py "typos20.data"
+
 import sys
 
 # X[t] representing letter states
@@ -140,23 +143,23 @@ def calcAllInitialStateDist(letters):
 # Simply Iterates through all of the letters and prints emmissions tables
 def printAllEmissions(letters):
 	for l in letters:
-		print "State %s: Observations" % l,
+		print "-----State %s Observations-----" % l
 		for i in letters[l].emmissions:
-			print "(%s|%s: %.3f)" % (i, l, letters[l].emmissions[i]),
+			print "P(%s|%s) = %.3f" % (i, l, letters[l].emmissions[i])
 		print ""
 
 def printAllTransitions(letters):
 	for l in letters:
-		print "State %s: Transitions" % l,
+		print "-----State %s: Transitions-----" % l
 		for i in letters[l].transitions:
-			print "(%s|%s: %.3f)" % (i, l, letters[l].transitions[i]),
+			print "P(%s|%s) = %.3f" % (i, l, letters[l].transitions[i])
 		print ""
 
 def printAllInitStateDist(letters):
 	total = 0.
 	for l in letters:
 		total = total + letters[l].initialState
-		print "State %s: Initial State Distribution %.5f" % (l, letters[l].initialState)
+		print "P(%s) = %.5f" % (l, letters[l].initialState)
 	print "Total: %.5f" % total
 
 # -------------------------------------------------------------
