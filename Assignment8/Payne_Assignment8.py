@@ -1,8 +1,8 @@
 # Assignment 8
 # Willie Payne
 
-# Run by calling the data file as a commandline argument For example:
-# $ python Payne_Assignment8.py "typos20.data"
+# Run by calling the data files as commandline arguments For example:
+# $ python Payne_Assignment8.py "typos20.data" "types20Testdata"
 
 import sys
 
@@ -63,7 +63,7 @@ class Letter(object):
 # Read in the data file and return a list of all the outputs
 # 	return letterList -> letterList[position][0 = state | 1 = observed]
 def readFile():
-	if len(sys.argv) != 2:
+	if len(sys.argv) != 3:
 		print "Wrong number of arguments supplied"
 		return False
 	else:
@@ -77,6 +77,22 @@ def readFile():
 			if len(sp) == 2:
 				letterList.append([sp[0], sp[1]])
 		return letterList
+
+def readTestFile():
+	fileName = sys.argv[2]
+	testStates = []
+	testObservations = []
+	letterString = open(fileName, 'r')
+	letterString = letterString.read()
+	rows = letterString.split("\n")
+	for row in rows:
+		if len(row) == 3:
+			sp = row.split(' ')
+			testStates.append(sp[0])
+			testObservations.append(sp[1])
+	return testStates, testObservations
+
+
 
 # Returns a dict of all 26 letters attached to letter objects
 def createLetters():
@@ -169,6 +185,7 @@ def main():
 	if letterList == False:
 		return False
 
+	# Calculate HMM
 	letters = createLetters()
 	letters = countObservations(letters, letterList)
 	letters = calcAllEmissions(letters)
@@ -176,13 +193,20 @@ def main():
 	letters = calcAllTransitions(letters)
 	letters = countOccurences(letters, letterList)
 	letters = calcAllInitialStateDist(letters)
+	
+	# Viterbi
+	testStates, testObservations = readTestFile()
+	
 
+	'''
 	print "-----------------Emissions Probabilities-----------------"
 	printAllEmissions(letters)
 	print "-----------------Transition Probabilities-----------------"
 	printAllTransitions(letters)
 	print "----------------Initial State Distribution----------------"
 	printAllInitStateDist(letters)
+	'''
+
 
 if __name__ == '__main__':
 	main()
