@@ -5,6 +5,7 @@
 # $ python Payne_Assignment8.py "typos20.data" "types20Testdata"
 
 import sys
+from math import log10
 
 # X[t] representing letter states
 class Letter(object):
@@ -46,11 +47,12 @@ class Letter(object):
 			# Laplace Smoothed Estimate
 			self.emmissions[observedLetter] = (1 + self.observed[observedLetter])/(statesNum + totalStates)
 
+		# Set really small so virtually impossible, but still able to take the logarithm
 		for l in range(97,123):
 			if chr(l) not in self.emmissions:
-				self.emmissions[chr(l)] = 0.
+				self.emmissions[chr(l)] = 0.0001
 		if "_" not in self.emmissions:
-			self.emmissions["_"] = 0.
+			self.emmissions["_"] = 0.0001
 
 	# Update the transitions dict to contain probabilities for all next letters
 	# With transitions - there is the chance for any letter, though it some are very very small
@@ -166,34 +168,56 @@ def readTestFile():
 # I used the wikipedia page on Viterbi as a resource
 # 	https://en.wikipedia.org/wiki/Viterbi_algorithm
 def viterbi(letters, obs):
-	vit = [{}]
+	vit = [{}] 
 	path = {}
 	
 	# Initialize case zero for all states
+	# Use logarithms to prevent underflow errors
+		# 	If not used, every character after a point will be thought to be 'z'
 	for letter in letters:
-		vit[0][letter] = letters[letter].initialState * letters[letter].emmissions[obs[0]]
+		vit[0][letter] = log10(letters[letter].initialState) + log10(letters[letter].emmissions[obs[0]])
 		path[letter] = [letter]
-		print path[letter]
 
-	# Iterate through all other letters
+	# Iterate through the rest of the observation
+	# For each possible state at each time, keep track of 
+	# what its path and probability would be
 	for l in range(1, len(obs)):
 		vit.append({})
 		newPath = {}
-
 		for s in letters:
 			# (prob, state) = max((V[t-1][y0] * trans_p[y0][y] * emit_p[y][obs[t]], y0) for y0 in states)
-			(prob, state) = max((vit[l-1][s0] * letters[s0].transitions[s] * letters[s].emmissions[obs[l]], s0) for s0 in letters)
-			vit[l][s] = prob
+			(prob, state) = max((vit[l-1][s0] + log10(letters[s0].transitions[s]) + log10(letters[s].emmissions[obs[l]]), s0) for s0 in letters)
+			vit[l][s] = prob # keep track of each possible letter's greatest probability
+			# New path is the path up to the most probable state
 			newPath[s] = path[state] + [s]
 		
+		# We don't care about older paths, only the current one
 		path = newPath
 
+	# Determine the the most probable last letter
 	n = len(obs) - 1
 	(prob, state) = max((vit[n][s], s) for s in letters)
-
-	print path[state]
 	
-	return (prob, path[state])
+	return path[state]
+
+def checkResults(testStates, testObservations, finalPath):
+	size = len(finalPath)
+	correctObs = 0.
+	correctVit = 0.
+	finalOutput = "States | Observations | Viterbi" + "\n" + "----------------------------" + "\n"
+	for i in range(size):
+		finalOutput = finalOutput + ' | '.join([testStates[i], testObservations[i], finalPath[i], "\n"])
+		if testObservations[i] == testStates[i]:
+			correctObs = correctObs + 1
+		if finalPath[i] == testStates[i]:
+			correctVit = correctVit + 1
+	correctObs = 1 - (correctObs/size)
+	correctVit = 1 - (correctVit/size)
+	print "Observations Error Rate: %f" % correctObs
+	print "Viterbi Error Rate: %f" % correctVit
+	print finalOutput
+	return correctVit
+
 
 # -------------------------------------------------------------
 
@@ -237,8 +261,8 @@ def main():
 	
 	# Viterbi
 	testStates, testObservations = readTestFile()
-	viterbi(letters, testObservations)
-
+	finalPath = viterbi(letters, testObservations)
+	checkResults(testStates, testObservations, finalPath)
 
 	'''
 	print "-----------------Emissions Probabilities-----------------"
