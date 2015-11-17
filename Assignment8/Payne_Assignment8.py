@@ -33,6 +33,7 @@ class Letter(object):
 
 	# Update the emisstions dict to contain probabilities for all observed letters
 	# Emissions Probabilities only have observed values local to them
+	# 	All other letters since they are impossible will be given a value of 0
 	def calcEmissions(self):
 		statesNum = len(self.observed) # possible states
 		totalStates =  0. # Count of all observed states
@@ -44,6 +45,12 @@ class Letter(object):
 		for observedLetter in self.observed:
 			# Laplace Smoothed Estimate
 			self.emmissions[observedLetter] = (1 + self.observed[observedLetter])/(statesNum + totalStates)
+
+		for l in range(97,123):
+			if chr(l) not in self.emmissions:
+				self.emmissions[chr(l)] = 0.
+		if "_" not in self.emmissions:
+			self.emmissions["_"] = 0.
 
 	# Update the transitions dict to contain probabilities for all next letters
 	# With transitions - there is the chance for any letter, though it some are very very small
@@ -77,22 +84,6 @@ def readFile():
 			if len(sp) == 2:
 				letterList.append([sp[0], sp[1]])
 		return letterList
-
-def readTestFile():
-	fileName = sys.argv[2]
-	testStates = []
-	testObservations = []
-	letterString = open(fileName, 'r')
-	letterString = letterString.read()
-	rows = letterString.split("\n")
-	for row in rows:
-		if len(row) == 3:
-			sp = row.split(' ')
-			testStates.append(sp[0])
-			testObservations.append(sp[1])
-	return testStates, testObservations
-
-
 
 # Returns a dict of all 26 letters attached to letter objects
 def createLetters():
@@ -156,6 +147,56 @@ def calcAllInitialStateDist(letters):
 
 # -------------------------------------------------------------
 
+# Viterbi Code Goes Here
+
+def readTestFile():
+	fileName = sys.argv[2]
+	testStates = []
+	testObservations = []
+	letterString = open(fileName, 'r')
+	letterString = letterString.read()
+	rows = letterString.split("\n")
+	for row in rows:
+		if len(row) == 3:
+			sp = row.split(' ')
+			testStates.append(sp[0])
+			testObservations.append(sp[1])
+	return testStates, testObservations
+
+# I used the wikipedia page on Viterbi as a resource
+# 	https://en.wikipedia.org/wiki/Viterbi_algorithm
+def viterbi(letters, obs):
+	vit = [{}]
+	path = {}
+	
+	# Initialize case zero for all states
+	for letter in letters:
+		vit[0][letter] = letters[letter].initialState * letters[letter].emmissions[obs[0]]
+		path[letter] = [letter]
+		print path[letter]
+
+	# Iterate through all other letters
+	for l in range(1, len(obs)):
+		vit.append({})
+		newPath = {}
+
+		for s in letters:
+			# (prob, state) = max((V[t-1][y0] * trans_p[y0][y] * emit_p[y][obs[t]], y0) for y0 in states)
+			(prob, state) = max((vit[l-1][s0] * letters[s0].transitions[s] * letters[s].emmissions[obs[l]], s0) for s0 in letters)
+			vit[l][s] = prob
+			newPath[s] = path[state] + [s]
+		
+		path = newPath
+
+	n = len(obs) - 1
+	(prob, state) = max((vit[n][s], s) for s in letters)
+
+	print path[state]
+	
+	return (prob, path[state])
+
+# -------------------------------------------------------------
+
 # Simply Iterates through all of the letters and prints emmissions tables
 def printAllEmissions(letters):
 	for l in letters:
@@ -196,7 +237,8 @@ def main():
 	
 	# Viterbi
 	testStates, testObservations = readTestFile()
-	
+	viterbi(letters, testObservations)
+
 
 	'''
 	print "-----------------Emissions Probabilities-----------------"
